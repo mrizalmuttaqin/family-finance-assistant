@@ -173,17 +173,24 @@ function detectCategory(text, type) {
 function detectType(text) {
   const t = text.toLowerCase();
 
+  // Transfer dan alokasi tabungan/investasi
   if (
     /transfer|tabung|alokasi tabungan|beli emas|beli saham|beli obligasi|beli reksa dana|investasi/.test(t)
   ) {
     return "transfer";
   }
 
-  if (/gaji masuk|pemasukan|pendapatan|terima uang|dapat uang|bonus masuk/.test(t)) {
+  // Pemasukan
+  if (
+    /gaji|pemasukan|pendapatan|terima uang|dapat uang|bonus|thr/.test(t)
+  ) {
     return "income";
   }
 
-  if (/beli|bayar|pengeluaran|jajan|makan|isi bensin|servis/.test(t)) {
+  // Pengeluaran
+  if (
+    /beli|bayar|pengeluaran|jajan|makan|isi bensin|servis/.test(t)
+  ) {
     return "expense";
   }
 
