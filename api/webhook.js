@@ -255,7 +255,37 @@ function formatRupiah(amount) {
 }
 
 function cleanDescription(text) {
-  return text
+  const accountNames = [
+    "Tabungan Keluarga",
+    "Tabungan Lebaran",
+    "Dana Darurat",
+    "Pluang - Emas",
+    "Bibit - Reksa Dana",
+    "Bibit - Obligasi",
+    "Bibit - Saham",
+    "ShopeePay",
+    "Kas",
+    "BRI",
+    "BNI",
+    "Jago",
+    "BSI",
+    "iSaku",
+    "OVO",
+    "GoPay",
+    "DANA"
+  ];
+
+  let result = text;
+
+  // Hapus nama rekening
+  for (const account of accountNames) {
+    result = result.replace(
+      new RegExp(`\\b${account.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"),
+      ""
+    );
+  }
+
+  return result
     .replace(/(\d[\d.,]*\s*(?:rb|ribu|jt|juta|miliar)?)/i, "")
     .replace(/\b(dari|ke|masuk|sebesar)\b/gi, "")
     .replace(/\s+/g, " ")
