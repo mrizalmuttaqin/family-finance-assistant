@@ -122,26 +122,6 @@ function parseAmount(text) {
 function detectCategory(text, type) {
   const t = text.toLowerCase();
 
-  if (type === "income") {
-    if (/gaji|salary/.test(t)) return "Gaji";
-    if (/usaha|jualan|freelance|bisnis/.test(t))
-      return "Usaha / Penghasilan Sampingan";
-    if (/bonus|thr/.test(t)) return "Bonus / THR";
-    if (/dividen|bunga|kupon|capital gain/.test(t))
-      return "Pendapatan Investasi";
-    return "Pemasukan Lainnya";
-  }
-
-  if (type === "transfer") {
-    if (/emas|reksa dana|reksadana|obligasi|saham|investasi/.test(t))
-      return "Pembelian Investasi";
-    if (/tarik.*investasi|cair.*investasi/.test(t))
-      return "Penarikan Investasi";
-    if (/tabung|tabungan|dana darurat/.test(t))
-      return "Alokasi Tabungan";
-    return "Transfer Antar-Rekening";
-  }
-
   if (/bensin|bbm|transport|parkir|ojek|bensin/.test(t))
     return "Transportasi dan BBM";
   if (/makan|minum|kopi|jajan|sarapan|makan siang/.test(t))
@@ -173,23 +153,8 @@ function detectCategory(text, type) {
 function detectType(text) {
   const t = text.toLowerCase();
 
-  // Transfer dan alokasi tabungan/investasi
   if (
-    /transfer|tabung|alokasi tabungan|beli emas|beli saham|beli obligasi|beli reksa dana|investasi/.test(t)
-  ) {
-    return "transfer";
-  }
-
-  // Pemasukan
-  if (
-    /gaji|pemasukan|pendapatan|terima uang|dapat uang|bonus|thr/.test(t)
-  ) {
-    return "income";
-  }
-
-  // Pengeluaran
-  if (
-    /beli|bayar|pengeluaran|jajan|makan|isi bensin|servis/.test(t)
+    /beli|bayar|pengeluaran|jajan|makan|minum|bensin|bbm|isi bensin|servis|parkir|ongkir|popok|susu/.test(t)
   ) {
     return "expense";
   }
@@ -337,10 +302,10 @@ async function handleMessage(message, updateId) {
     await telegramReply(
       chatId,
       "👋 Selamat datang di Keluarga Zale Finance Bot!\n\n" +
-      "Contoh transaksi:\n" +
+      "Contoh pencatatan pengeluaran:\n" +
       "• Beli bensin 30rb dari BRI\n" +
-      "• Gaji masuk 7,4 juta ke BNI\n" +
-      "• Transfer 500rb dari BRI ke Tabungan Lebaran\n\n" +
+      "• Beli susu Aza 150rb dari BRI\n" +
+      "• Belanja dapur 250rb dari Jago\n\n" +
       "Setiap transaksi akan menunggu konfirmasi sebelum disimpan."
     );
     return;
@@ -356,70 +321,6 @@ async function handleMessage(message, updateId) {
     await telegramReply(chatId, "🟢 Bot aktif\n🟢 Koneksi Supabase berhasil");
     return;
   }
-
-  if (command === "/saldo") {
-  const [accounts, transactions] = await Promise.all([
-    supabaseRequest(
-      "accounts",
-      `select=id,name,account_type,opening_balance&family_id=eq.${member.family_id}`
-    ),
-    supabaseRequest(
-      "transactions",
-      `select=account_id,destination_account_id,transaction_type,amount&family_id=eq.${member.family_id}&status=eq.confirmed`
-    ),
-  ]);
-
-  const balances = {};
-
-  // Mulai dari saldo awal masing-masing rekening
-  for (const account of accounts) {
-    balances[account.id] = Number(account.opening_balance || 0);
-  }
-
-  // Hitung seluruh transaksi yang sudah dikonfirmasi
-  for (const transaction of transactions) {
-    const amount = Number(transaction.amount);
-
-    if (transaction.transaction_type === "income") {
-      if (balances[transaction.account_id] !== undefined) {
-        balances[transaction.account_id] += amount;
-      }
-    }
-
-    if (transaction.transaction_type === "expense") {
-      if (balances[transaction.account_id] !== undefined) {
-        balances[transaction.account_id] -= amount;
-      }
-    }
-
-    if (transaction.transaction_type === "transfer") {
-      if (balances[transaction.account_id] !== undefined) {
-        balances[transaction.account_id] -= amount;
-      }
-
-      if (balances[transaction.destination_account_id] !== undefined) {
-        balances[transaction.destination_account_id] += amount;
-      }
-    }
-  }
-
-  const totalBalance = Object.values(balances).reduce(
-    (total, balance) => total + balance,
-    0
-  );
-
-  let reply = "💰 SALDO REKENING KELUARGA ZALE\n\n";
-
-  for (const account of accounts) {
-    reply += `${account.name}: ${formatRupiah(balances[account.id])}\n`;
-  }
-
-  reply += `\n━━━━━━━━━━━━━━\n`;
-  reply += `TOTAL SALDO: ${formatRupiah(totalBalance)}`;
-
-  await telegramReply(chatId, reply);
-  return;
-}
 
   if (command === "/confirm" || command === "/batal") {
   const pending = await supabaseRequest(
@@ -493,18 +394,7 @@ async function handleMessage(message, updateId) {
     ),
   ]);
 
-  let sourceAccount;
-  let destinationAccount = null;
-
-  if (type === "income") {
-    sourceAccount = findAccount(text, accounts, "destination");
-  } else {
-    sourceAccount = findAccount(text, accounts, "source");
-  }
-
-  if (type === "transfer") {
-    destinationAccount = findAccount(text, accounts, "destination");
-  }
+  const sourceAccount = findAccount(text, accounts, "source");
 
   if (!sourceAccount) {
     await telegramReply(
@@ -513,26 +403,6 @@ async function handleMessage(message, updateId) {
     );
     return;
   }
-
-  if (type === "transfer" && !destinationAccount) {
-    await telegramReply(
-      chatId,
-      "Rekening tujuan belum dikenali.\n\nContoh:\nTransfer 500rb dari BRI ke Tabungan Lebaran"
-    );
-    return;
-  }
-
-  if (type === "transfer" && sourceAccount.id === destinationAccount.id) {
-    await telegramReply(chatId, "Rekening asal dan tujuan tidak boleh sama.");
-    return;
-  }
-
-  const categoryName = detectCategory(text, type);
-  const category = categories.find(
-    (item) =>
-      item.name === categoryName &&
-      item.transaction_type === type
-  );
 
   if (!category) {
     await telegramReply(
@@ -553,7 +423,7 @@ async function handleMessage(message, updateId) {
         family_id: member.family_id,
         member_id: member.id,
         account_id: sourceAccount.id,
-        destination_account_id: destinationAccount?.id || null,
+        destination_account_id: null,
         category_id: category.id,
         transaction_type: type,
         amount,
@@ -569,18 +439,15 @@ async function handleMessage(message, updateId) {
 
   let detail = `📝 KONFIRMASI TRANSAKSI\n\n`;
   detail += `Anggota: ${member.display_name}\n`;
-  detail += `Jenis: ${type === "income" ? "Pemasukan" : type === "expense" ? "Pengeluaran" : "Transfer"}\n`;
+  detail += `Jenis: Pengeluaran\n`;
   detail += `Nominal: ${formatRupiah(amount)}\n`;
   detail += `Kategori: ${category.name}\n`;
+  detail += `Dari: ${sourceAccount.name}\n`;
 
   if (type === "income") {
     detail += `Masuk ke: ${sourceAccount.name}\n`;
   } else {
     detail += `Dari: ${sourceAccount.name}\n`;
-  }
-
-  if (destinationAccount) {
-    detail += `Ke: ${destinationAccount.name}\n`;
   }
 
   detail += `Keterangan: ${description}\n\n`;
