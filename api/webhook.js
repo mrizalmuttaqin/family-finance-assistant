@@ -275,9 +275,9 @@ async function handleMessage(message, updateId) {
   if (!allowedUsers.includes(userId)) return;
 
   const members = await supabaseRequest(
-    "family_members",
-    `select=id,family_id,name&telegram_user_id=eq.${userId}&is_active=eq.true&limit=1`
-  );
+  "family_members",
+  `select=id,family_id,display_name&telegram_user_id=eq.${userId}&is_active=eq.true&limit=1`
+);
 
   if (!members.length) {
     await telegramReply(chatId, "Akun Telegram ini belum terdaftar sebagai anggota keluarga.");
@@ -457,7 +457,7 @@ async function handleMessage(message, updateId) {
   const transaction = inserted[0];
 
   let detail = `📝 KONFIRMASI TRANSAKSI\n\n`;
-  detail += `Anggota: ${member.name}\n`;
+  detail += `Anggota: ${member.display_name}\n`;
   detail += `Jenis: ${type === "income" ? "Pemasukan" : type === "expense" ? "Pengeluaran" : "Transfer"}\n`;
   detail += `Nominal: ${formatRupiah(amount)}\n`;
   detail += `Kategori: ${category.name}\n`;
