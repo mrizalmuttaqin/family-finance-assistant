@@ -300,48 +300,48 @@ async function handleMessage(message, updateId) {
     return;
   }
 
-  if (text === "/ping") {
+  if (command === "/ping") {
     await telegramReply(chatId, "Pong! 🟢 Bot berjalan dengan baik.");
     return;
   }
 
-  if (text === "/status") {
+  if (command === "/status") {
     await supabaseRequest("families", "select=id&limit=1");
     await telegramReply(chatId, "🟢 Bot aktif\n🟢 Koneksi Supabase berhasil");
     return;
   }
 
-  if (text === "/confirm" || text === "/batal") {
-    const pending = await supabaseRequest(
-      "transactions",
-      `select=id,description,amount,transaction_type&family_id=eq.${member.family_id}&member_id=eq.${member.id}&status=eq.pending&order=created_at.desc&limit=1`
-    );
+  if (command === "/confirm" || command === "/batal") {
+  const pending = await supabaseRequest(
+    "transactions",
+    `select=id,description,amount,transaction_type&family_id=eq.${member.family_id}&member_id=eq.${member.id}&status=eq.pending&order=created_at.desc&limit=1`
+  );
 
-    if (!pending.length) {
-      await telegramReply(chatId, "Tidak ada transaksi yang menunggu konfirmasi.");
-      return;
-    }
-
-    const transaction = pending[0];
-    const newStatus = text === "/confirm" ? "confirmed" : "cancelled";
-
-    await supabaseRequest(
-      "transactions",
-      `id=eq.${transaction.id}&family_id=eq.${member.family_id}`,
-      {
-        method: "PATCH",
-        body: { status: newStatus },
-      }
-    );
-
-    await telegramReply(
-      chatId,
-      newStatus === "confirmed"
-        ? `✅ Transaksi berhasil disimpan!\n${transaction.description}\n${formatRupiah(Number(transaction.amount))}`
-        : "❌ Transaksi dibatalkan."
-    );
+  if (!pending.length) {
+    await telegramReply(chatId, "Tidak ada transaksi yang menunggu konfirmasi.");
     return;
   }
+
+  const transaction = pending[0];
+  const newStatus = command === "/confirm" ? "confirmed" : "cancelled";
+
+  await supabaseRequest(
+    "transactions",
+    `id=eq.${transaction.id}&family_id=eq.${member.family_id}`,
+    {
+      method: "PATCH",
+      body: { status: newStatus },
+    }
+  );
+
+  await telegramReply(
+    chatId,
+    newStatus === "confirmed"
+      ? `✅ Transaksi berhasil disimpan!\n${transaction.description}\n${formatRupiah(Number(transaction.amount))}`
+      : "❌ Transaksi dibatalkan."
+  );
+  return;
+}
 
   if (text.startsWith("/")) {
     await telegramReply(chatId, "Perintah belum tersedia. Gunakan /start untuk melihat panduan.");
