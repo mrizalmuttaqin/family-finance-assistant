@@ -357,6 +357,70 @@ async function handleMessage(message, updateId) {
     return;
   }
 
+  if (command === "/saldo") {
+  const [accounts, transactions] = await Promise.all([
+    supabaseRequest(
+      "accounts",
+      `select=id,name,account_type,opening_balance&family_id=eq.${member.family_id}`
+    ),
+    supabaseRequest(
+      "transactions",
+      `select=account_id,destination_account_id,transaction_type,amount&family_id=eq.${member.family_id}&status=eq.confirmed`
+    ),
+  ]);
+
+  const balances = {};
+
+  // Mulai dari saldo awal masing-masing rekening
+  for (const account of accounts) {
+    balances[account.id] = Number(account.opening_balance || 0);
+  }
+
+  // Hitung seluruh transaksi yang sudah dikonfirmasi
+  for (const transaction of transactions) {
+    const amount = Number(transaction.amount);
+
+    if (transaction.transaction_type === "income") {
+      if (balances[transaction.account_id] !== undefined) {
+        balances[transaction.account_id] += amount;
+      }
+    }
+
+    if (transaction.transaction_type === "expense") {
+      if (balances[transaction.account_id] !== undefined) {
+        balances[transaction.account_id] -= amount;
+      }
+    }
+
+    if (transaction.transaction_type === "transfer") {
+      if (balances[transaction.account_id] !== undefined) {
+        balances[transaction.account_id] -= amount;
+      }
+
+      if (balances[transaction.destination_account_id] !== undefined) {
+        balances[transaction.destination_account_id] += amount;
+      }
+    }
+  }
+
+  const totalBalance = Object.values(balances).reduce(
+    (total, balance) => total + balance,
+    0
+  );
+
+  let reply = "💰 SALDO REKENING KELUARGA ZALE\n\n";
+
+  for (const account of accounts) {
+    reply += `${account.name}: ${formatRupiah(balances[account.id])}\n`;
+  }
+
+  reply += `\n━━━━━━━━━━━━━━\n`;
+  reply += `TOTAL SALDO: ${formatRupiah(totalBalance)}`;
+
+  await telegramReply(chatId, reply);
+  return;
+}
+
   if (command === "/confirm" || command === "/batal") {
   const pending = await supabaseRequest(
     "transactions",
