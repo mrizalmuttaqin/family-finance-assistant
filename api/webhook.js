@@ -266,6 +266,7 @@ async function handleMessage(message, updateId) {
   const chatId = message.chat.id;
   const userId = String(message.from.id);
   const text = String(message.text || "").trim();
+  const command = text.trim().split(/\s+/)[0].split("@")[0].toLowerCase();
 
   const allowedUsers = (TELEGRAM_ALLOWED_USER_IDS || "")
     .split(",")
@@ -286,7 +287,7 @@ async function handleMessage(message, updateId) {
 
   const member = members[0];
 
-  if (text === "/start") {
+  if (command === "/start") {
     await telegramReply(
       chatId,
       "👋 Selamat datang di Keluarga Zale Finance Bot!\n\n" +
