@@ -65,19 +65,22 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 405, { ok: false, message: "Method not allowed" });
   }
 
-  if (!isAuthorized(req)) {
-  console.error("Webhook authentication diagnostic:", {
-    secretConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET),
-    headerReceived: typeof req.headers["x-telegram-bot-api-secret-token"] === "string",
-    configuredLength: TELEGRAM_WEBHOOK_SECRET?.length || 0,
-    receivedLength:
-      typeof req.headers["x-telegram-bot-api-secret-token"] === "string"
-        ? req.headers["x-telegram-bot-api-secret-token"].length
-        : 0
-  });
+    if (!isAuthorized(req)) {
+    console.error("Webhook authentication diagnostic:", {
+      secretConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET),
+      headerReceived:
+        typeof req.headers["x-telegram-bot-api-secret-token"] === "string",
+      configuredLength: TELEGRAM_WEBHOOK_SECRET?.length || 0,
+      receivedLength:
+        typeof req.headers["x-telegram-bot-api-secret-token"] === "string"
+          ? req.headers["x-telegram-bot-api-secret-token"].length
+          : 0,
+    });
 
-  return sendJson(res, 401, { ok: false, message: "Unauthorized" });
-}
+    return sendJson(res, 401, {
+      ok: false,
+      message: "Unauthorized",
+    });
   }
 
   if (
