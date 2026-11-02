@@ -206,13 +206,13 @@ function findAccount(text, accounts, position) {
     jago: ["jago", "bankjago"],
     bsi: ["bsi"],
     kas: ["kas", "tunai", "cash"],
-    shopeepay: ["shopeepay", "shopeepay"],
+    shopeepay: ["shopeepay"],
     isaku: ["isaku"],
     ovo: ["ovo"],
     gopay: ["gopay"],
     dana: ["dana"],
     pluangemas: ["pluang", "emas"],
-    bibitreksadana: ["bibit", "reksadana", "reksadana"],
+    bibitreksadana: ["bibit", "reksadana"],
     bibitobligasi: ["bibit", "obligasi"],
     bibitsaham: ["bibit", "saham"],
     tabungankeluarga: ["tabungankeluarga"],
@@ -220,39 +220,48 @@ function findAccount(text, accounts, position) {
     danadarurat: ["danadarurat"],
   };
 
-  const candidates = accounts
-    .filter((account) => {
-      const name = normalize(account.name);
-      if (t.includes(name)) return true;
-
-      const key = Object.keys(aliases).find((k) => normalize(account.name) === k);
-      if (!key) return false;
-
-      return aliases[key].some((alias) => t.includes(normalize(alias)));
-    })
-    .sort((a, b) => normalize(b.name).length - normalize(a.name).length);
+  let segment = t;
 
   if (position === "source") {
     const fromIndex = t.lastIndexOf("dari");
+    const toIndex = t.lastIndexOf("ke");
+
     if (fromIndex >= 0) {
-      return candidates.find((a) =>
-        t.slice(fromIndex + 4).includes(normalize(a.name))
-      ) || null;
+      segment = t.slice(
+        fromIndex + 4,
+        toIndex > fromIndex ? toIndex : undefined
+      );
     }
   }
 
   if (position === "destination") {
     const toIndex = t.lastIndexOf("ke");
+
     if (toIndex >= 0) {
-      return candidates.find((a) =>
-        t.slice(toIndex + 2).includes(normalize(a.name))
-      ) || null;
+      segment = t.slice(toIndex + 2);
     }
   }
 
-  return candidates[0] || null;
-}
+  const candidates = accounts.filter((account) => {
+    const name = normalize(account.name);
 
+    if (segment.includes(name)) return true;
+
+    const key = Object.keys(aliases).find(
+      (k) => normalize(account.name) === k
+    );
+
+    if (!key) return false;
+
+    return aliases[key].some((alias) =>
+      segment.includes(normalize(alias))
+    );
+  });
+
+  return candidates.sort(
+    (a, b) => normalize(b.name).length - normalize(a.name).length
+  )[0] || null;
+}
 function formatRupiah(amount) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
